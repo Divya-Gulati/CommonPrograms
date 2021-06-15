@@ -24,7 +24,7 @@ parameters{5} = 'orientation';
 parameters{6} = 'contrast';
 parameters{7} = 'temporalFrequency'; %#ok<NASGU>
 
-if stimResults.side == 3 % Plaids
+if isfield(stimResults,'side') && stimResults.side == 3 % Plaids
     aValsAll  = stimResults.azimuth(1:2:end);
     eValsAll  = stimResults.elevation(1:2:end);
     if isfield(stimResults,'radius')
@@ -51,7 +51,7 @@ if stimResults.side == 3 % Plaids
     cValsAll2 = stimResults.contrast(2:2:end);
     tValsAll2 = stimResults.temporalFrequency(2:2:end);
 
-else
+elseif isfield(stimResults,'side') && stimResults.side ~= 3 || ~isfield(stimResults,'side')
     aValsAll  = stimResults.azimuth;
     eValsAll  = stimResults.elevation;
     if isfield(stimResults,'radius')
@@ -85,7 +85,7 @@ if ~isempty(aValsAll)
     tValsUnique = unique(tValsGood); tLen = length(tValsUnique);
 
     % display
-    if stimResults.side == 3 % Plaids
+    if isfield(stimResults,'side') && stimResults.side == 3 % Plaids
         disp('Left plaid component');
     end
     disp(['Number of unique azimuths: ' num2str(aLen)]);
@@ -177,7 +177,7 @@ if ~isempty(aValsAll)
     save(fullfile(folderOut,'parameterCombinations.mat'),'parameters','parameterCombinations', ...
         'aValsUnique','eValsUnique','sValsUnique','fValsUnique','oValsUnique','cValsUnique','tValsUnique');
 
-    if stimResults.side == 3 % Plaids
+    if isfield(stimResults,'side') && stimResults.side == 3  % Plaids
         
         aValsGood = aValsAll2(goodStimNums);
         eValsGood = eValsAll2(goodStimNums);
