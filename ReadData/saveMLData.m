@@ -37,7 +37,6 @@ allCodeTimes = [];
 allCodeNumbers=[];
 allStimulusIndex = [];
 allTrialNumbers=[];
-stimNumbers = [];
 
 for i=1:numTrials
     cT=data(i).BehavioralCodes.CodeTimes + data(i).AbsoluteTrialStartTime;
@@ -48,12 +47,8 @@ for i=1:numTrials
     allTrialNumbers = cat(2,allTrialNumbers,zeros(1,length(cN))+i);
 end
 
-stimNumbers = cat(2,stimNumbers,data.Condition);
-
 ML.allCodeTimes = allCodeTimes;
 ML.allCodeNumbers = allCodeNumbers;
 ML.allStimulusIndex = allStimulusIndex;
 ML.allTrialNumbers = allTrialNumbers;
-ML.stimNumbers = stimNumbers;
-
 end
