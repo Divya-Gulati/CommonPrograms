@@ -9,7 +9,9 @@
 % nonEEGElectrodes are other analog electrodes that are not considered for bad trial analysis
 % capType: Name of the montage. Set to empty for LFP data
 
-function [badTrials,allBadTrials,badTrialsUnique,badElecs,totalTrials,slopeValsVsFreq] = findBadTrialsWithEEG(subjectName,expDate,protocolName,folderSourceString,gridType,badEEGElectrodes,nonEEGElectrodes,impedanceTag,capType,saveDataFlag,badTrialNameStr,displayResultsFlag)
+function [badTrials,allBadTrials,badTrialsUnique,badElecs,totalTrials,slopeValsVsFreq] = ...
+    findBadTrialsWithEEG(subjectName,expDate,protocolName,folderSourceString,gridType,badEEGElectrodes,...
+    nonEEGElectrodes,impedanceTag,capType,saveDataFlag,badTrialNameStr,displayResultsFlag,electrodeGroup,checkPeriod,checkBaselinePeriod,useEyeData)
 
 if ~exist('gridType','var');        gridType = 'EEG';                   end
 if ~exist('badEEGElectrodes','var');  badEEGElectrodes = [];            end
@@ -19,10 +21,13 @@ if ~exist('capType','var');         capType = 'actiCap64';              end
 if ~exist('saveDataFlag','var');    saveDataFlag = 1;                   end
 if ~exist('badTrialNameStr','var'); badTrialNameStr = '_v5';            end
 if ~exist('displayResultsFlag','var'); displayResultsFlag=0;            end
+if ~exist('electrodeGroup','var');  electrodeGroup='';                  end
+if ~exist('checkPeriod','var');     checkPeriod = [-0.50 0.75];         end % s
+if ~exist('checkBaselinePeriod','var'); checkBaselinePeriod = [-0.5 0]; end % For computing slopes for artifact rejection
+if ~exist('useEyeData','var');      useEyeData = 1;                     end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Initializations %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 highPassCutOff = 1.6; % Hz
-checkPeriod = [-0.500 0.750]; % s
 ImpedanceCutOff = 25; % KOhm
 time_threshold  = 6;
 psd_threshold = 6;
@@ -31,8 +36,6 @@ badTrialThreshold = 30; % Percentage
 tapersPSD = 1; % No. of tapers used for computation of slopes
 slopeRange = {[56 86]}; % Hz, slope range used to compute slopes
 freqsToAvoid = {[0 0] [8 12] [46 54] [96 104]}; % Hz
-
-checkBaselinePeriod = [-0.5 0]; % For computing slopes for artifact rejection
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
@@ -62,7 +65,7 @@ if ~isempty(capType)
     if ~isequal(eegElectrodeLabels(:),montageLabels(:))
         error('Montage labels do not match with channel labels');
     else
-        highPriorityElectrodeList = getHighPriorityElectrodes(capType);
+        highPriorityElectrodeList = getHighPriorityElectrodes(capType,electrodeGroup);
     end
 else
     highPriorityElectrodeList = [];
@@ -70,9 +73,6 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Impedance data %%%%%%%%%%%%%%%%%%%%%%%%
 [elecImpedanceLabels,elecImpedanceValues] = getImpedanceDataEEG(subjectName,expDate,folderSourceString,gridType,impedanceTag,0,capType);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Eye data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[eyeDataDeg,eyeRangeMS,FsEye] = getEyeData(folderName);
 
 %%%%%%%%%%%%%%%%%%%%%%%% Set up MT parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Fs = 1/(timeVals(2) - timeVals(1)); %Hz
@@ -84,17 +84,25 @@ params.fpass    = [0 200];
 params.trialave = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% Bad Trial Analysis %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+totalTrials = size(eegData,2);
+originalTrialInds = 1:totalTrials;
+
 % 1. Get bad trials from eye data
-if exist('FsEye','var') && ~isempty(FsEye)
-    badEyeTrials = findBadTrialsFromEyeData_v2(eyeDataDeg,eyeRangeMS,FsEye,checkPeriod)'; % added by MD 10-09-2017; Modified by MD 03-09-2019
+if useEyeData
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Eye data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    [eyeDataDeg,eyeRangeMS,FsEye] = getEyeData(folderName);
+    if ~isempty(FsEye)
+        badEyeTrials = findBadTrialsFromEyeData_v2(eyeDataDeg,eyeRangeMS,FsEye,checkPeriod)'; % added by MD 10-09-2017; Modified by MD 03-09-2019
+    else
+        disp('Eye data not found');
+        badEyeTrials = [];
+    end
+    originalTrialInds(badEyeTrials) = [];
+    clear eyeDataDeg
 else
+    disp('Eye data is not used for analysis');
     badEyeTrials = [];
 end
-originalTrialInds = 1:size(eegData,2);
-originalTrialInds(badEyeTrials) = [];
-clear eyeDataDeg
-
-totalTrials = size(eegData,2);
 badTrialsUnique.badEyeTrials = badEyeTrials;
 
 % 2. Get electrode impedances for rejecting noisy electrodes (impedance > 25k)
@@ -262,21 +270,28 @@ eyeDataFile1 = fullfile(folderName,'extractedData','EyeData.mat');
 eyeDataFile2 = fullfile(folderName,'segmentedData','eyeData','eyeDataDeg.mat');
 
 if isfile(eyeDataFile1) && isfile(eyeDataFile2)
-    FsEye = 500;
+    eyeRangeMS = load(eyeDataFile1);
+    if isfield(eyeRangeMS,'FsEye')
+        FsEye = eyeRangeMS.FsEye;
+    else
+        FsEye = 500;
+    end
 else
     FsEye = [];
 end
 
 if ~isempty(FsEye)
-    eyeRangeMS = load(eyeDataFile1);
-    eyeRangeMS = eyeRangeMS.eyeRangeMS;
+%     eyeRangeMS = load(eyeDataFile1);
+    eyeRangeMS = eyeRangeMS.eyeRangeMS; 
     eyeData = load(eyeDataFile2);
     
     eyeDataDegX = eyeData.eyeDataDegX;
     eyeDataDegY = eyeData.eyeDataDegY;
     
-    eyeDataDegX = concatenateCellArrayToMatrix(eyeDataDegX)';
-    eyeDataDegY = concatenateCellArrayToMatrix(eyeDataDegY)';
+    if iscell(eyeDataDegX) && iscell(eyeDataDegY)
+        eyeDataDegX = concatenateCellArrayToMatrix(eyeDataDegX)';
+        eyeDataDegY = concatenateCellArrayToMatrix(eyeDataDegY)';
+    end
     
     eyeData.eyeDataDegX = eyeDataDegX;
     eyeData.eyeDataDegY = eyeDataDegY;
@@ -314,5 +329,16 @@ for iCol = 1:cols
         end
     end
     newMatrix(:,iCol) = vector;
+end
+end
+function vector = resizeVector(vector,numRowsElement)
+if size(vector,1)>=numRowsElement
+    vector = vector(1:numRowsElement);
+elseif size(vector,1)<numRowsElement
+    lastElementIdx = size(vector,1);
+    lastElement = vector(end);
+    for i = 1:numRowsElement-size(vector,1)
+        vector(lastElementIdx+i) = lastElement;
+    end
 end
 end
