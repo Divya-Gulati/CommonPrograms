@@ -3,9 +3,15 @@
 % 1 - Mapping 1
 % 2 - Task Gabor
 
-function matchingParameters=compareLLwithNEV(folderExtract,activeSide,showResults)
+% Adding option to update stimResults from LL even if this data is
+% available in stimResults
 
-load(fullfile(folderExtract,'LL.mat'));
+function matchingParameters=compareLLwithNEV(folderExtract,activeSide,showResults,updateStimResultsFromLLFlag,colorGaborFlag)
+
+if ~exist('updateStimResultsFromLLFlag','var'); updateStimResultsFromLLFlag=0; end
+if ~exist('colorGaborFlag','var'); colorGaborFlag=0; end
+
+load(fullfile(folderExtract,'LL.mat')); %#ok<*LOAD>
 load(fullfile(folderExtract,'stimResults.mat'));
 
 % Use trialResults instead of digitalEvents, as it has the same data nicely
@@ -18,6 +24,26 @@ if ~exist('digitalCodeLoss','var'); digitalCodeLoss = 0; end
 % Compare basic properties
 % NEV stores information of only one of the Gabors (activeSide)
 
+if colorGaborFlag
+    updateStimResultsFromLLFlag=1; % Make sure stimResults is created using LL
+    validMap = find(LL.stimType1==1); % Take azi and ele from stimType1
+    aziLL = LL.azimuthDeg1(validMap);
+    eleLL = LL.elevationDeg1(validMap);
+    
+    sigmaLL = LL.sigmaDeg2(validMap);
+    if isfield(LL,'radiusDeg2')
+        radiusExists = 1;
+        radiusLL = LL.radiusDeg2(validMap);
+    else
+        radiusExists = 0;
+    end
+    sfLL = LL.spatialFreqCPD2(validMap);
+    oriLL = LL.orientationDeg2(validMap);
+    conLL = LL.contrastPC2(validMap); 
+    tfLL = LL.temporalFreqHz2(validMap);
+    timeLL = LL.time2(validMap);
+else
+    
 if activeSide==3 % Plaid
     validMap1 = find(LL.stimType1==5);
     validMap2 = find(LL.stimType2==5);
@@ -84,11 +110,12 @@ elseif activeSide==1 % Map2
     tfLL = LL.temporalFreqHz2(validMap);
     timeLL = LL.time2(validMap);
 end
+end
 
 % Compare
 
-if ~isfield(stimResults,'azimuth') %#ok<NODEF>
-    disp('Stimulus parameter values not present in the digital data stream, taking from the LL file...');
+if ~isfield(stimResults,'azimuth') || updateStimResultsFromLLFlag %#ok<NODEF>
+    disp('Stimulus parameter values not present or incorrect in the digital data stream, taking from the LL file...');
     
     stimResults.azimuth = aziLL;
     stimResults.elevation = eleLL;
@@ -365,7 +392,7 @@ end
 end
 function result = compareValues(x,y)
 thres = 10^(-2);
-if max(x-y) < thres;
+if max(x-y) < thres
     result=1;
 else
     result=0;

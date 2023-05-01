@@ -404,6 +404,8 @@ hMessage = uicontrol('Unit','Normalized','Position',[0 0.975 1 0.025],...
 % Remove non EEG channels
 analogChannelsStored = intersect(analogChannelsStored,unique(electrodeArray));
 neuralChannelsStored = intersect(neuralChannelsStored,unique(electrodeArray));
+
+colormap jet;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % functions
     function plotData_Callback(~,~)
@@ -458,8 +460,8 @@ neuralChannelsStored = intersect(neuralChannelsStored,unique(electrodeArray));
                     timeVals,plotColor,SourceUnitID,holdOnState,blRange,stRange,gridType,subjectName);
                 responsiveElectrodes = (channelsStored(stimulusFiringRate>=5));
                 inhibitedElectrodes = (channelsStored(intersect(find(baselineFiringRate>=5),find(stimulusFiringRate<=5))));
-                disp(['responsive: ' num2str(responsiveElectrodes)]);
-                disp(['inhibited : ' num2str(inhibitedElectrodes)]);
+%                disp(['responsive: ' num2str(responsiveElectrodes)]);
+%                disp(['inhibited : ' num2str(inhibitedElectrodes)]);
                 showElectrodeLocations(electrodeGridPos,responsiveElectrodes,'b',hElectrodes,1,0,gridType,subjectName,gridLayout);
                 showElectrodeLocations(electrodeGridPos,inhibitedElectrodes,'g',hElectrodes,1,0,gridType,subjectName,gridLayout);
                 

@@ -422,6 +422,8 @@ hContrastPlot     = getPlotHandles(1,length(cValsUnique),contrastGrid,0.002);
 hOrientationPlot  = getPlotHandles(1,length(oValsUnique),orientationGrid,0.002);
 hSpatialFreqPlot  = getPlotHandles(1,length(fValsUnique),spatialFreqGrid,0.002);
 hSigmaPlot        = getPlotHandles(1,length(sValsUnique),sigmaGrid,0.002);
+
+colormap jet
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % functions
     function plotData_Callback(~,~)
@@ -744,7 +746,7 @@ params.trialave = 1; %averaging across trials
 useCommonBLFlag=1;
 if analysisType == 10
     clear goodPos
-    goodPos = parameterCombinations{numCols+1,numRows+1,s,f,o,c,t};
+    goodPos = parameterCombinations{size(parameterCombinations,1),size(parameterCombinations,2),s,f,o,c,t};
     goodPos = setdiff(goodPos,badTrials);
     
     [S,timeTF] = mtspecgramc(analogData(goodPos,:)',movingwin,params);
